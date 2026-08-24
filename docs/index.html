@@ -270,10 +270,7 @@
                 </a>
 
                 <div class="nav-section-title mt-4"><i class="fa fa-cutlery mr-1"></i> 餐饮管理</div>
-                <a href="#" data-page="foodManage" class="menu-item flex items-center px-5 py-3 rounded-lg mb-0.5 text-sm">
-                    <i class="fa fa-cutlery w-6 text-base"></i>餐饮管理
-                    <span class="ml-auto bg-success/20 text-success text-[10px] px-2 py-0.5 rounded-full">开台9</span>
-                </a>
+                <!-- 餐饮管理菜单已删除 -->
                 <a href="#" data-page="foodConfig" class="menu-item flex items-center px-5 py-3 rounded-lg mb-0.5 text-sm">
                     <i class="fa fa-coffee w-6 text-base"></i>菜品管理
                 </a>
@@ -528,7 +525,7 @@
                     </div>
                 </div>
 
-                <!-- ==================== 【3】餐饮管理页面 ==================== -->
+                <!-- ==================== 【3】餐饮管理页面（内容保留但菜单已删除） ==================== -->
                 <div id="page-foodManage" class="page-content">
                     <div class="card-lux p-6 mb-6">
                         <div class="flex flex-wrap gap-4 items-end mb-6">
@@ -1082,6 +1079,10 @@
             const activeMenu = Array.from(menuItems).find(m => m.dataset.page === pageId);
             if (activeMenu) activeMenu.classList.add('sidebar-active');
             document.querySelector('main').scrollTop = 0;
+            // 切换到餐饮管理时随机生成人数（但菜单已删除，此分支通常不会触发）
+            if (pageId === 'foodManage') {
+                randomizeFoodPeople();
+            }
         }
         menuItems.forEach(item => {
             item.addEventListener('click', function(e) {
@@ -1089,6 +1090,32 @@
                 switchPage(this.dataset.page);
             });
         });
+
+        // ============================================================
+        // 2. 餐饮管理人数随机生成（确保人均60~300元）
+        // ============================================================
+        function randomizeFoodPeople() {
+            const foodTable = document.querySelector('#page-foodManage tbody');
+            if (!foodTable) return;
+            const rows = foodTable.querySelectorAll('tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                // 确保是数据行（至少8个单元格）
+                if (cells.length < 8) return;
+                // 读取消费金额（第5列，索引4），去除货币符号和逗号
+                const amountText = cells[4].innerText.replace(/[^\d.]/g, '');
+                const amount = parseFloat(amountText);
+                if (isNaN(amount) || amount <= 0) return;
+                // 计算人数合法范围
+                const minPeople = Math.ceil(amount / 300);
+                const maxPeople = Math.floor(amount / 60);
+                if (maxPeople < minPeople) return; // 极端金额无法满足时跳过
+                // 随机生成人数
+                const randomPeople = Math.floor(Math.random() * (maxPeople - minPeople + 1)) + minPeople;
+                // 更新第4列（索引3）的人数显示
+                cells[3].innerText = randomPeople + '人';
+            });
+        }
 
         // ========== 固定历史月份数据仓库 ==========
         const fixedMonthData = {
@@ -1105,7 +1132,7 @@
         };
 
         // ============================================================
-        // 2. 报表功能
+        // 3. 报表功能
         // ============================================================
         const now = new Date();
         const todayStr = now.toISOString().split('T')[0];
@@ -1275,12 +1302,14 @@
         }
 
         // ============================================================
-        // 3. 初始化
+        // 4. 初始化
         // ============================================================
         window.addEventListener('DOMContentLoaded', function() {
             switchPage('report');
             document.getElementById('btnQuery').addEventListener('click', queryReport);
             document.getElementById('btnExport').addEventListener('click', exportExcel);
+            // 初始化时也随机生成一次（虽然页面不可见，但不影响）
+            randomizeFoodPeople();
             queryReport();
         });
     </script>
