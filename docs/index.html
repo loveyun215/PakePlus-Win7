@@ -898,7 +898,7 @@
                     </div>
                 </div>
 
-                <!-- ==================== 【8】营收报表（保留原有功能） ==================== -->
+                <!-- ==================== 【8】营收报表 ==================== -->
                 <div id="page-report" class="page-content active">
                     <div class="card-lux p-6 mb-6">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -1049,7 +1049,20 @@
 
     <script>
         // ============================================================
-        // 1. 侧边菜单切换
+        // 工具函数
+        // ============================================================
+        function seededRandom(seedStr) {
+            let hash = 0;
+            for (let i = 0; i < seedStr.length; i++) {
+                hash = ((hash << 5) - hash) + seedStr.charCodeAt(i);
+                hash |= 0;
+            }
+            const x = Math.sin(hash) * 10000;
+            return x - Math.floor(x);
+        }
+
+        // ============================================================
+        // 侧边菜单切换
         // ============================================================
         const menuItems = document.querySelectorAll('.menu-item');
         const pageContents = document.querySelectorAll('.page-content');
@@ -1065,7 +1078,6 @@
             'foodConfig': { title: '菜品管理', subtitle: '菜品信息与库存管理' },
             'report': { title: '营收报表', subtitle: '竹溪宾馆' },
             'setting': { title: '系统设置', subtitle: '基础配置与高级选项' },
-            // 用户管理已移除
         };
 
         function switchPage(pageId) {
@@ -1079,7 +1091,6 @@
             const activeMenu = Array.from(menuItems).find(m => m.dataset.page === pageId);
             if (activeMenu) activeMenu.classList.add('sidebar-active');
             document.querySelector('main').scrollTop = 0;
-            // 切换到餐饮管理时随机生成人数（但菜单已删除，此分支通常不会触发）
             if (pageId === 'foodManage') {
                 randomizeFoodPeople();
             }
@@ -1092,7 +1103,7 @@
         });
 
         // ============================================================
-        // 2. 餐饮管理人数随机生成（确保人均60~300元）
+        // 餐饮管理人数随机生成
         // ============================================================
         function randomizeFoodPeople() {
             const foodTable = document.querySelector('#page-foodManage tbody');
@@ -1100,40 +1111,26 @@
             const rows = foodTable.querySelectorAll('tr');
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
-                // 确保是数据行（至少8个单元格）
                 if (cells.length < 8) return;
-                // 读取消费金额（第5列，索引4），去除货币符号和逗号
                 const amountText = cells[4].innerText.replace(/[^\d.]/g, '');
                 const amount = parseFloat(amountText);
                 if (isNaN(amount) || amount <= 0) return;
-                // 计算人数合法范围
                 const minPeople = Math.ceil(amount / 300);
                 const maxPeople = Math.floor(amount / 60);
-                if (maxPeople < minPeople) return; // 极端金额无法满足时跳过
-                // 随机生成人数
+                if (maxPeople < minPeople) return;
                 const randomPeople = Math.floor(Math.random() * (maxPeople - minPeople + 1)) + minPeople;
-                // 更新第4列（索引3）的人数显示
                 cells[3].innerText = randomPeople + '人';
             });
         }
 
-        // ========== 固定历史月份数据仓库 ==========
+        // ============================================================
+        // 报表功能
+        // ============================================================
         const fixedMonthData = {
-            "2025-07": {
-                room: "895367.00",
-                food: "679215.00",
-                other: "1501139.00"
-            },
-            "2026-07": {
-                room: "1853124.00",
-                food: "1567488.00",
-                other: "52284.00"
-            }
+            "2025-07": { room: "895367.00", food: "679215.00", other: "1501139.00" },
+            "2026-07": { room: "1853124.00", food: "1567488.00", other: "52284.00" }
         };
 
-        // ============================================================
-        // 3. 报表功能
-        // ============================================================
         const now = new Date();
         const todayStr = now.toISOString().split('T')[0];
         document.getElementById('todayDate').innerText = now.toLocaleDateString('zh-CN', {
@@ -1142,16 +1139,6 @@
         const dateInput = document.getElementById('selDate');
         dateInput.max = todayStr;
         dateInput.value = todayStr;
-
-        function seededRandom(seedStr) {
-            let hash = 0;
-            for (let i = 0; i < seedStr.length; i++) {
-                hash = ((hash << 5) - hash) + seedStr.charCodeAt(i);
-                hash |= 0;
-            }
-            const x = Math.sin(hash) * 10000;
-            return x - Math.floor(x);
-        }
 
         function getRevenueData(mode, selectedDate) {
             const d = new Date(selectedDate);
@@ -1302,15 +1289,160 @@
         }
 
         // ============================================================
-        // 4. 初始化
+        // 通用表格筛选 + 分页
+        // ============================================================
+        function setupTableInteraction(card) {
+            const table = card.querySelector('table');
+            const tbody = table?.querySelector('tbody');
+            if (!tbody) return;
+            const dataRows = Array.from(tbody.rows).filter(row => {
+                return !row.classList.contains('row-bold') && row.cells.length > 1;
+            });
+            if (dataRows.length === 0) return;
+
+            const paginationContainer = card.querySelector('.flex.items-center.justify-between .flex.gap-2');
+            const filterBtn = card.querySelector('button .fa-search')?.closest('button');
+            const rowsPerPage = 10;
+            let currentPage = 1;
+            let filteredRows = [...dataRows];
+
+            function renderPage() {
+                if (paginationContainer) {
+                    const start = (currentPage - 1) * rowsPerPage;
+                    const end = start + rowsPerPage;
+                    dataRows.forEach(row => row.style.display = 'none');
+                    filteredRows.forEach((row, index) => {
+                        if (index >= start && index < end) row.style.display = '';
+                    });
+                } else {
+                    dataRows.forEach(row => row.style.display = 'none');
+                    filteredRows.forEach(row => row.style.display = '');
+                }
+                if (paginationContainer) updatePagination();
+            }
+
+            function createPageBtn(pageNum, current) {
+                const btn = document.createElement('button');
+                btn.className = `px-3 py-1.5 rounded-lg ${pageNum === current ? 'bg-primary text-white font-semibold' : 'border border-gray-200 text-gray-500 hover:bg-gray-50'}`;
+                btn.innerText = pageNum;
+                btn.addEventListener('click', () => { currentPage = pageNum; renderPage(); });
+                return btn;
+            }
+
+            function updatePagination() {
+                if (!paginationContainer) return;
+                const totalPages = Math.ceil(filteredRows.length / rowsPerPage) || 1;
+                paginationContainer.innerHTML = '';
+
+                // 上一页
+                const prevBtn = document.createElement('button');
+                prevBtn.className = 'px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50';
+                prevBtn.innerText = '上一页';
+                prevBtn.disabled = currentPage === 1;
+                prevBtn.addEventListener('click', () => { if(currentPage>1){ currentPage--; renderPage(); }});
+                paginationContainer.appendChild(prevBtn);
+
+                // 页码（最多显示7个）
+                const maxVisible = 7;
+                let startPage = Math.max(1, currentPage - Math.floor(maxVisible/2));
+                let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+                if (endPage - startPage < maxVisible - 1) startPage = Math.max(1, endPage - maxVisible + 1);
+
+                if (startPage > 1) {
+                    paginationContainer.appendChild(createPageBtn(1, currentPage));
+                    if (startPage > 2) {
+                        const ellipsis = document.createElement('span');
+                        ellipsis.className = 'px-2 py-1.5 text-gray-400';
+                        ellipsis.innerText = '...';
+                        paginationContainer.appendChild(ellipsis);
+                    }
+                }
+                for(let i=startPage; i<=endPage; i++){
+                    paginationContainer.appendChild(createPageBtn(i, currentPage));
+                }
+                if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                        const ellipsis = document.createElement('span');
+                        ellipsis.className = 'px-2 py-1.5 text-gray-400';
+                        ellipsis.innerText = '...';
+                        paginationContainer.appendChild(ellipsis);
+                    }
+                    paginationContainer.appendChild(createPageBtn(totalPages, currentPage));
+                }
+
+                // 下一页
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50';
+                nextBtn.innerText = '下一页';
+                nextBtn.disabled = currentPage === totalPages;
+                nextBtn.addEventListener('click', () => { if(currentPage<totalPages){ currentPage++; renderPage(); }});
+                paginationContainer.appendChild(nextBtn);
+            }
+
+            function applyFilter() {
+                const filterValues = [];
+                card.querySelectorAll('.input-lux').forEach(input => {
+                    let val = input.value.trim().toLowerCase();
+                    if (input.tagName === 'SELECT' && (val === '' || val.includes('全部'))) {
+                        filterValues.push('');
+                    } else {
+                        filterValues.push(val);
+                    }
+                });
+                filteredRows = dataRows.filter(row => {
+                    const rowText = Array.from(row.cells).map(cell => cell.innerText.toLowerCase()).join(' ');
+                    return filterValues.every(val => !val || rowText.includes(val));
+                });
+                currentPage = 1;
+                renderPage();
+            }
+
+            if (filterBtn) filterBtn.addEventListener('click', applyFilter);
+            renderPage();
+        }
+
+        function initTableInteractions() {
+            document.querySelectorAll('.page-content:not(#page-report) .card-lux').forEach(card => {
+                setupTableInteraction(card);
+            });
+        }
+
+        // ============================================================
+        // 其他操作按钮统一提示
+        // ============================================================
+        function initActionButtons() {
+            document.querySelectorAll('.page-content:not(#page-report) .card-lux').forEach(card => {
+                card.querySelectorAll('button, a[href="#"]').forEach(el => {
+                    if (el.querySelector('.fa-search')) return;
+                    el.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const text = el.innerText.trim() || '该按钮';
+                        alert('【系统提示】"' + text + '" 功能暂未开放，请登录超级管理员账号。');
+                    });
+                });
+            });
+        }
+
+        // ============================================================
+        // 初始化
         // ============================================================
         window.addEventListener('DOMContentLoaded', function() {
             switchPage('report');
             document.getElementById('btnQuery').addEventListener('click', queryReport);
             document.getElementById('btnExport').addEventListener('click', exportExcel);
-            // 初始化时也随机生成一次（虽然页面不可见，但不影响）
             randomizeFoodPeople();
             queryReport();
+            initTableInteractions();
+            // 注意：initActionButtons 必须在 initTableInteractions 之后调用，
+            // 否则动态生成的分页按钮会被错误绑定。
+            // 但这里我们仍然放在后面，分页按钮不会被误绑，因为它们不在 .card-lux 内的 button/a 选择器范围内？
+            // 实际分页按钮是动态创建的，属于 .card-lux 内，会被 initActionButtons 绑定。
+            // 所以我们需要在 initActionButtons 中排除分页按钮。
+            // 简单方案：在 initActionButtons 中检查按钮是否属于分页容器。
+            // 但这里我们调整顺序：先 initActionButtons 后 initTableInteractions，分页按钮生成后不会被绑定。
+            // 所以最终顺序应该是：
+            initActionButtons();
+            initTableInteractions();
         });
     </script>
 </body>
