@@ -276,7 +276,10 @@
                 </a>
 
                 <div class="nav-section-title mt-4"><i class="fa fa-file-text mr-1"></i> 订单与报表</div>
-                <!-- 订单列表菜单已删除 -->
+                <a href="#" data-page="orderList" class="menu-item flex items-center px-5 py-3 rounded-lg mb-0.5 text-sm">
+                    <i class="fa fa-list-alt w-6 text-base"></i>订单列表
+                    <span class="ml-auto bg-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded-full">384</span>
+                </a>
                 <a href="#" data-page="report" class="menu-item sidebar-active flex items-center px-5 py-3 rounded-lg mb-0.5 text-sm">
                     <i class="fa fa-bar-chart w-6 text-base"></i>营收报表
                 </a>
@@ -588,7 +591,7 @@
                     </div>
                 </div>
 
-                <!-- ==================== 【4】订单列表页面（内容保留，但侧边栏按钮已删除） ==================== -->
+                <!-- ==================== 【4】订单列表页面 ==================== -->
                 <div id="page-orderList" class="page-content">
                     <div class="card-lux p-6 mb-6">
                         <div class="flex flex-wrap gap-4 items-end mb-6">
@@ -1069,6 +1072,7 @@
         const pageMeta = {
             'roomManage': { title: '住宿管理', subtitle: '客房入住与退房管理' },
             'foodManage': { title: '餐饮管理', subtitle: '餐台与订单管理' },
+            'orderList': { title: '订单列表', subtitle: '住宿与餐饮订单查询' },
             'roomConfig': { title: '客房管理', subtitle: '客房信息与状态维护' },
             'roomType': { title: '房型管理', subtitle: '房型配置与价格管理' },
             'foodConfig': { title: '菜品管理', subtitle: '菜品信息与库存管理' },
